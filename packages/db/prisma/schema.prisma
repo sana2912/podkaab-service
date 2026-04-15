@@ -1,0 +1,201 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+enum Emotion {
+  HAPPY
+  SAD
+  EXCITED
+  SHOCKED
+  CURIOUS
+  INSPIRED
+}
+
+enum TargetType {
+  COLLECTION
+  SHORT_CONTENT
+  FULL_CONTENT
+}
+
+enum FeedEventType {
+  IMPRESSION
+  VIEW_START
+  WATCH_PROGRESS
+  VIEW_COMPLETE
+  CONTINUE_CLICK
+  FULL_START
+  FULL_COMPLETE
+  SKIP
+  REACTION
+}
+
+enum MediaStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum CollectionFullMode {
+  SINGLE
+  SERIES
+}
+
+enum ContentRole {
+  SHORT
+  FULL
+}
+
+enum PlaybackKind {
+  VIDEO
+  AUDIO
+}
+
+// ---------------------------------------------------------------------------
+// User
+// ---------------------------------------------------------------------------
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  displayName String
+  createdAt   DateTime @default(now())
+
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Collection (new canonical storytelling container)
+// One collection groups a discovery surface (shorts) with one full content
+// or a sequence of full contents.
+// ---------------------------------------------------------------------------
+model Collection {
+  id              String             @id @default(cuid())
+  title           String
+  description     String
+  coverUrl        String?
+  fullMode        CollectionFullMode
+  primaryEmotion  Emotion?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  contents        Content[]
+
+  @@map("collections")
+}
+
+// ---------------------------------------------------------------------------
+// Content (new canonical playable unit)
+// role=SHORT  -> discovery clips in the feed
+// role=FULL   -> one full piece or an ordered full-content series
+// ---------------------------------------------------------------------------
+model Content {
+  id                  String       @id @default(cuid())
+  collectionId        String
+  mediaId             String?
+  title               String
+  description         String?
+  role                ContentRole
+  playbackKind        PlaybackKind @default(VIDEO)
+  order               Int          @default(0)
+  sourceUrl           String?
+  durationSeconds     Int?
+  primaryEmotion      Emotion?
+  continueConversionScore Float    @default(0)
+  completionScore     Float        @default(0)
+  recencyScore        Float        @default(0)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  collection          Collection   @relation(fields: [collectionId], references: [id])
+  media               Media?       @relation(fields: [mediaId], references: [id])
+  outgoingWarps       ContentWarp[] @relation("ShortContentWarp")
+  incomingWarps       ContentWarp[] @relation("TargetContentWarp")
+
+  @@map("contents")
+}
+
+// ---------------------------------------------------------------------------
+// ContentWarp
+// Maps a short content into a full content target and an optional start time.
+// Example: short A -> full content B at 00:01:30
+// ---------------------------------------------------------------------------
+model ContentWarp {
+  id                 String   @id @default(cuid())
+  shortContentId     String
+  targetContentId    String
+  targetStartSeconds Int      @default(0)
+  createdAt          DateTime @default(now())
+
+  shortContent       Content  @relation("ShortContentWarp", fields: [shortContentId], references: [id])
+  targetContent      Content  @relation("TargetContentWarp", fields: [targetContentId], references: [id])
+
+  @@map("content_warps")
+}
+
+// ---------------------------------------------------------------------------
+// UserProgress
+// ---------------------------------------------------------------------------
+model UserProgress {
+  id              String   @id @default(cuid())
+  userId          String
+  contentId       String
+  progressSeconds Float    @default(0)
+  isComplete      Boolean  @default(false)
+  lastWatchedAt   DateTime @default(now())
+
+  @@map("user_progress")
+}
+
+// ---------------------------------------------------------------------------
+// UserReaction
+// ---------------------------------------------------------------------------
+model UserReaction {
+  id         String     @id @default(cuid())
+  userId     String
+  targetId   String
+  targetType TargetType
+  emotion    Emotion
+  createdAt  DateTime   @default(now())
+
+  @@map("user_reactions")
+}
+
+// ---------------------------------------------------------------------------
+// FeedEvent  (analytics)
+// ---------------------------------------------------------------------------
+model FeedEvent {
+  id              String        @id @default(cuid())
+  userId          String
+  contentId       String
+  targetContentId String?
+  eventType       FeedEventType
+  createdAt       DateTime      @default(now())
+
+  @@map("feed_events")
+}
+
+// ---------------------------------------------------------------------------
+// Media  (upload + processing state)
+// ---------------------------------------------------------------------------
+model Media {
+  id           String      @id @default(cuid())
+  originalUrl  String
+  processedUrl String?
+  thumbnailUrl String?
+  waveformUrl  String?
+  status       MediaStatus @default(PENDING)
+  errorMessage String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  contents     Content[]
+
+  @@map("media")
+}

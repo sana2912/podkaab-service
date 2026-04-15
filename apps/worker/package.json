@@ -1,0 +1,21 @@
+{
+  "name": "@podkaap/worker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "bun --hot run src/worker.ts",
+    "start": "bun run dist/worker.js",
+    "build": "bun build src/worker.ts --outdir dist --target bun",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@podkaap/db": "workspace:*",
+    "@podkaap/queue": "workspace:*",
+    "@podkaap/shared": "workspace:*",
+    "bullmq": "^5.72.1"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.11",
+    "typescript": "^6.0.2"
+  }
+}

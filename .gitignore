@@ -1,0 +1,39 @@
+# ─── Node / Bun ────────────────────────────────────────────────────────────
+node_modules/
+dist/
+.turbo/
+
+# ─── dotenvx keys — NEVER commit these ────────────────────────────────────
+# The encrypted .env.* files are safe to commit.
+# The private keys in .env.keys are NOT.
+.env.keys
+
+# ─── Plaintext env fallback — also gitignored ──────────────────────────────
+# .env.development / .env.staging / .env.production are committed
+# in their encrypted form. A bare .env is used only locally.
+.env
+.env.local
+.env.*.local
+
+# ─── Linter caches ─────────────────────────────────────────────────────────
+.biome/
+.eslintcache
+
+# ─── OS / IDE ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/settings.json
+
+# ─── Build artifacts ───────────────────────────────────────────────────────
+apps/*/dist/
+packages/*/dist/
+
+# ─── Prisma generated client ───────────────────────────────────────────────
+packages/db/node_modules/.prisma/
+
+# ─── Temp media processing files ───────────────────────────────────────────
+tmp/
+*.tmp.mp4
+*.tmp.jpg
+*.tmp.png

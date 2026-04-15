@@ -1,0 +1,15 @@
+#!/bin/sh
+# ──────────────────────────────────────────────────────────────────────────────
+# pre-commit — runs on every `git commit`
+#
+# Steps:
+#   1. Biome — format + lint + fix (fast, Rust-based)
+#   2. ESLint / Ultracite — type-aware rules (requires TypeScript compiler)
+#   3. Workspace typecheck — ensures apps/packages still compile together
+#
+# If any step fails the commit is blocked.
+# ──────────────────────────────────────────────────────────────────────────────
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🔍 Running pre-commit checks..."
+bun run precommit:verify

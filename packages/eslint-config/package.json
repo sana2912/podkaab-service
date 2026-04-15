@@ -1,0 +1,21 @@
+{
+  "name": "@podkaap/eslint-config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ultracite": "^7.4.2"
+  },
+  "devDependencies": {
+    "eslint": "^10.1.0",
+    "typescript": "^6.0.2"
+  },
+  "peerDependencies": {}
+}

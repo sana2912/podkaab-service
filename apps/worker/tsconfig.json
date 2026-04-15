@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["bun"],
+    "paths": {
+      "@podkaap/db": ["../../packages/db/src/index.ts"],
+      "@podkaap/queue": ["../../packages/queue/src/index.ts"],
+      "@podkaap/shared": ["../../packages/shared/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

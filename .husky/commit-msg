@@ -1,0 +1,31 @@
+#!/bin/sh
+# ──────────────────────────────────────────────────────────────────────────────
+# commit-msg — enforces Conventional Commits format
+#
+# Valid prefixes: feat | fix | chore | docs | style | refactor | test | perf | ci | build | revert
+#
+# Examples:
+#   feat(feed): add emotion-based ranking
+#   fix(auth): handle expired JWT gracefully
+#   chore: bump bullmq to v5.12
+# ──────────────────────────────────────────────────────────────────────────────
+. "$(dirname "$0")/_/husky.sh"
+
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+PATTERN="^(feat|fix|chore|docs|style|refactor|test|perf|ci|build|revert)(\(.+\))?: .{1,100}"
+
+if ! echo "$COMMIT_MSG" | grep -qE "$PATTERN"; then
+  echo ""
+  echo "❌  Invalid commit message format."
+  echo ""
+  echo "   Expected: <type>(<scope>): <description>"
+  echo "   Example:  feat(feed): add diversity pass to ranking"
+  echo ""
+  echo "   Allowed types: feat | fix | chore | docs | style | refactor | test | perf | ci | build | revert"
+  echo ""
+  echo "   Your message: $COMMIT_MSG"
+  echo ""
+  exit 1
+fi

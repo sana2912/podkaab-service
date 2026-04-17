@@ -1,6 +1,10 @@
 # Podkaap Backend
 
-MVP streaming platform backend — modular monolith + background worker.
+Podkaap backend ตอนนี้ประกอบด้วย 3 ส่วนหลัก:
+
+- API หลักบน `Bun + Elysia`
+- background worker บน `BullMQ + Dragonfly`
+- optional Python feed service ผ่าน `gRPC`
 
 ## Stack
 
@@ -11,21 +15,22 @@ MVP streaming platform backend — modular monolith + background worker.
 | Language | TypeScript |
 | ORM | Prisma |
 | Database | PostgreSQL |
+| Queue | BullMQ + Dragonfly |
+| Feed Decision Engine | Local TypeScript engine + optional Python gRPC service |
 | Media | FFmpeg |
 | Storage | Cloudinary / S3-compatible |
 
 ## Quick Start
 
 ```bash
-# 1. Copy env
-cp .env.example .env
-# Fill in DATABASE_URL, JWT_SECRET
-
-# 2. Install dependencies
+# 1. Install dependencies
 bun install
 
+# 2. Copy env
+cp .env.example .env.development
+
 # 3. Generate Prisma client & run migrations
-bun run db:generate
+bun run prisma:generate
 bun run db:migrate
 
 # 4. Seed demo data
@@ -34,46 +39,61 @@ bun run db:seed
 # 5. Start API
 bun run dev:api
 
-# 6. (Optional) Start background worker
+# 6. (Optional) Start worker
 bun run dev:worker
 ```
 
-API is available at `http://localhost:3000`
+ถ้าจะใช้ Python feed service เพิ่ม:
+
+```bash
+python -m pip install -r apps/feed-service-python/requirements.txt
+bun run dev:feed-service
+```
+
+แล้วเปิดใน env:
+
+```env
+FEED_SERVICE_ENABLED="true"
+FEED_SERVICE_URL="localhost:50051"
+```
+
+API is available at `http://localhost:3000`  
 Swagger docs at `http://localhost:3000/docs`
 
 ## Project Structure
 
-```
+```text
 podkaap-backend/
 ├── apps/
-│   ├── api/         # ElysiaJS HTTP server
-│   └── worker/      # Background media processing worker
+│   ├── api/                 # ElysiaJS HTTP server
+│   ├── worker/              # Background media/analytics worker
+│   └── feed-service-python/ # Optional gRPC feed engine
 ├── packages/
-│   ├── db/          # Prisma schema + client
-│   ├── shared/      # Shared enums & types
+│   ├── db/                  # Prisma schema + client
+│   ├── queue/               # BullMQ/Dragonfly helpers
+│   ├── shared/              # Shared enums & types
 │   └── eslint-config/
-└── scripts/         # Dev helpers
+├── proto/                   # gRPC contracts
+└── scripts/
 ```
 
 ## Content Model
 
-The canonical content model is:
+canonical model ของระบบคือ:
 
-- `Collection` = one story container per creation flow
-- `Content(role=SHORT)` = many short discovery clips
-- `Content(role=FULL)` = one long-form content or an ordered full-content series
-- `ContentWarp` = jump from a short clip into a specific full content and timeframe
+- `Collection` = story container
+- `Content(role=SHORT)` = short discovery clips
+- `Content(role=FULL)` = full content หนึ่งชิ้นหรือหลายตอน
+- `ContentWarp` = jump จาก short ไป full target พร้อม timeframe
 
-This single model supports both:
+รองรับทั้ง:
 
-- `SINGLE` collections with one full content item
-- `SERIES` collections with multiple ordered full content items
-
-See [docs/collection-content-direction.md](docs/collection-content-direction.md) for the canonical layout.
+- `SINGLE` collections
+- `SERIES` collections
 
 ## API Endpoints
 
-All routes are prefixed with `/api/v1`.
+all routes are prefixed with `/api/v1`
 
 | Module | Method | Path |
 |---|---|---|
@@ -87,54 +107,56 @@ All routes are prefixed with `/api/v1`.
 | Analytics | POST | `/analytics/events` |
 | Media | POST/GET | `/media` `/media/:id/process` `/media/:id/status` |
 
-## Feed Engine
+## Feed Architecture
 
-`GET /feed` runs a 3-step pipeline:
+`GET /feed` ทำงานแบบนี้:
 
-1. **Candidate generation** — pulls up to 200 mixed content items from `Content`, including:
-   - `SHORT` items with warp targets
-   - `FULL` items that can appear directly in feed
-2. **Ranking** — weighted score: `continueConversion(0.35) + completion(0.25) + recency(0.20) + emotionMatch(0.10) + freshness(0.10)` plus light boosts for active collections and format balancing
-3. **Diversity pass** — max 2 consecutive items from the same collection, preserves both `SHORT` and `LONG` feed lanes when possible, and reserves 20% exploration slots
+1. API query candidates จาก PostgreSQL
+2. API สร้าง user context เช่น emotion preferences
+3. API เลือก decision engine
+   - local TypeScript engine
+   - หรือ Python gRPC feed service ถ้าเปิด `FEED_SERVICE_ENABLED`
+4. API record impressions
+5. API map final response DTO ให้ frontend
+
+สิ่งสำคัญ:
+
+- Python feed service **ไม่ query DB**
+- Python feed service รับผิดชอบแค่:
+  - candidate filtering
+  - scoring
+  - ranking
+  - diversity
+- ถ้า Python service ล่ม API จะ fallback กลับ local TypeScript engine
+
+ดูรายละเอียดเพิ่มได้ที่ [apps/feed-service-python/README.md](apps/feed-service-python/README.md)
 
 ## Background Jobs
 
-| Job | Trigger | Purpose |
-|---|---|---|
-| `recompute-content-scores` | Scheduled / manual | Recompute conversion & completion scores from analytics |
-| `update-trending` | Scheduled / manual | Refresh time-decay recency scores |
-| `cleanup` | Daily | Purge analytics events older than 90 days |
+| Job | Purpose |
+|---|---|
+| `process-video` | main media processing flow |
+| `extract-thumbnail` | generate thumbnail |
+| `generate-waveform` | generate waveform asset |
+| `transcode-video` | transcode video |
+| `recompute-content-scores` | recompute content scores from analytics |
+| `update-trending` | refresh recency/trending scores |
+| `cleanup` | purge old analytics events |
 
-Run manually:
-```bash
-bun run apps/api/src/jobs/recompute-hook-scores.ts
-bun run apps/api/src/jobs/update-trending.ts
-bun run apps/api/src/jobs/cleanup.ts
-```
+## Tooling
 
-## Database
+- `Biome` ดู TS/JS/JSON/MD
+- `ESLint` ดู JS config
+- `pylint` ดู Python feed service
+- `Husky + lint-staged` รัน pre-commit checks
 
-Uses PostgreSQL via Prisma. Prefer Prisma migrations for schema changes:
+หมายเหตุ:
 
-```bash
-bun run db:migrate  # create/apply development migration
-bun run db:seed     # load demo data
-bun run db:generate # regenerate client after schema changes
-```
+- Biome ถูกกันไม่ให้สแกน `*.py`, `venv`, `__pycache__`, และ generated Python stubs
+- pre-commit จะรัน `pylint` กับ staged `*.py`
 
-## Authentication
+## Out of Scope
 
-Routes under `/progress`, `/continue-watching`, `/reactions`, and `/feed` require a `Bearer` token.
-
-Token format: `Authorization: Bearer <jwt>`
-
-JWT payload: `{ userId: string, email: string }`
-
-> For MVP testing, you can disable the auth guard in the controller or issue tokens manually.
-
-## Out of Scope (v1)
-
-- AI/ML personalization
-- Multi-quality transcoding pipeline
-- Distributed job queue
-- Microservices / Go integration
+- Python feed service query DB โดยตรง
+- microservices อื่นเพิ่มโดยยังไม่มี boundary ชัด
+- AI/ML personalization เต็มรูปแบบ

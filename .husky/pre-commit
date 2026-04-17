@@ -5,7 +5,8 @@
 # Steps:
 #   1. Biome — format + lint + fix (fast, Rust-based)
 #   2. ESLint / Ultracite — type-aware rules (requires TypeScript compiler)
-#   3. Workspace typecheck — ensures apps/packages still compile together
+#   3. Pylint — validates staged Python files
+#   4. Workspace typecheck — ensures apps/packages still compile together
 #
 # If any step fails the commit is blocked.
 # ──────────────────────────────────────────────────────────────────────────────

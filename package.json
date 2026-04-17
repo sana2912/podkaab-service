@@ -10,8 +10,10 @@
   "scripts": {
     "dev:api": "dotenvx run --env-file=.env.development -- bun --hot run apps/api/src/server.ts",
     "dev:worker": "dotenvx run --env-file=.env.development -- bun --hot run apps/worker/src/worker.ts",
+    "dev:feed-service": "dotenvx run --env-file=.env.development -- bash -lc 'if [ -f apps/feed-service-python/.venv/Scripts/activate ]; then source apps/feed-service-python/.venv/Scripts/activate; elif [ -f apps/feed-service-python/.venv/bin/activate ]; then source apps/feed-service-python/.venv/bin/activate; else echo \"Python venv not found. Run: bun run python:venv:setup\"; exit 1; fi; python apps/feed-service-python/app.py'",
     "start:prod:api": "dotenvx run --env-file=.env.production -- bun run apps/api/src/server.ts",
     "start:prod:worker": "dotenvx run --env-file=.env.production -- bun run apps/worker/src/worker.ts",
+    "start:prod:feed-service": "dotenvx run --env-file=.env.production -- bash -lc 'if [ -f apps/feed-service-python/.venv/Scripts/activate ]; then source apps/feed-service-python/.venv/Scripts/activate; elif [ -f apps/feed-service-python/.venv/bin/activate ]; then source apps/feed-service-python/.venv/bin/activate; else echo \"Python venv not found. Run: bun run python:venv:setup\"; exit 1; fi; python apps/feed-service-python/app.py'",
     "db:push": "dotenvx run --env-file=.env.development -- bun run --cwd packages/db db:push",
     "db:push:prod": "dotenvx run --env-file=.env.production -- bun run --cwd packages/db db:push",
     "db:migrate": "dotenvx run --env-file=.env.development -- bun run --cwd packages/db db:migrate",
@@ -35,6 +37,16 @@
     "lint": "bun run lint:biome && bun run lint:eslint && bun run typecheck:workspaces",
     "lint:biome": "biome check .",
     "lint:eslint": "eslint \"**/*.{js,cjs,mjs}\" --max-warnings=0",
+    "lint:python": "bun run python:proto:generate && bash -lc 'if [ -f apps/feed-service-python/.venv/Scripts/activate ]; then source apps/feed-service-python/.venv/Scripts/activate; elif [ -f apps/feed-service-python/.venv/bin/activate ]; then source apps/feed-service-python/.venv/bin/activate; else echo \"Python venv not found. Run: bun run python:venv:setup\"; exit 1; fi; python -m pylint --rcfile=apps/feed-service-python/.pylintrc apps/feed-service-python/app.py apps/feed-service-python/feed_engine.py'",
+    "python:venv:create": "python -m venv apps/feed-service-python/.venv",
+    "python:venv:setup": "python -m venv apps/feed-service-python/.venv && bash -lc 'if [ -f apps/feed-service-python/.venv/Scripts/activate ]; then source apps/feed-service-python/.venv/Scripts/activate; elif [ -f apps/feed-service-python/.venv/bin/activate ]; then source apps/feed-service-python/.venv/bin/activate; else echo \"Python venv not found after creation\"; exit 1; fi; python -m pip install -r apps/feed-service-python/requirements.txt'",
+    "python:install": "bash -lc 'if [ -f apps/feed-service-python/.venv/Scripts/activate ]; then source apps/feed-service-python/.venv/Scripts/activate; elif [ -f apps/feed-service-python/.venv/bin/activate ]; then source apps/feed-service-python/.venv/bin/activate; else echo \"Python venv not found. Run: bun run python:venv:setup\"; exit 1; fi; python -m pip install -r apps/feed-service-python/requirements.txt'",
+    "python:proto:generate": "bash -lc 'if [ -f apps/feed-service-python/.venv/Scripts/activate ]; then source apps/feed-service-python/.venv/Scripts/activate; elif [ -f apps/feed-service-python/.venv/bin/activate ]; then source apps/feed-service-python/.venv/bin/activate; else echo \"Python venv not found. Run: bun run python:venv:setup\"; exit 1; fi; mkdir -p apps/feed-service-python/generated && python -m grpc_tools.protoc -I proto --python_out=apps/feed-service-python/generated --grpc_python_out=apps/feed-service-python/generated proto/feed.proto'",
+    "python:lint": "bun run lint:python",
+    "python:format": "bash -lc 'if [ -f apps/feed-service-python/.venv/Scripts/activate ]; then source apps/feed-service-python/.venv/Scripts/activate; elif [ -f apps/feed-service-python/.venv/bin/activate ]; then source apps/feed-service-python/.venv/bin/activate; else echo \"Python venv not found. Run: bun run python:venv:setup\"; exit 1; fi; python -m black apps/feed-service-python/app.py apps/feed-service-python/feed_engine.py'",
+    "python:format:check": "bash -lc 'if [ -f apps/feed-service-python/.venv/Scripts/activate ]; then source apps/feed-service-python/.venv/Scripts/activate; elif [ -f apps/feed-service-python/.venv/bin/activate ]; then source apps/feed-service-python/.venv/bin/activate; else echo \"Python venv not found. Run: bun run python:venv:setup\"; exit 1; fi; python -m black --check apps/feed-service-python/app.py apps/feed-service-python/feed_engine.py'",
+    "python:lint:fix": "bun run python:format",
+    "python:check": "bun run python:format:check && bun run python:lint",
     "lint:fix": "biome check --write . && eslint \"**/*.{js,cjs,mjs}\" --fix",
     "format": "biome format --write .",
     "precommit:verify": "bun run lint-staged && bun run typecheck",
@@ -64,6 +76,10 @@
     ],
     "*.{json,md,yaml,yml}": [
       "biome format --write"
+    ],
+    "*.py": [
+      "bun run python:proto:generate",
+      "bash -lc 'if [ -f apps/feed-service-python/.venv/Scripts/activate ]; then source apps/feed-service-python/.venv/Scripts/activate; elif [ -f apps/feed-service-python/.venv/bin/activate ]; then source apps/feed-service-python/.venv/bin/activate; else echo \"Python venv not found. Run: bun run python:venv:setup\"; exit 1; fi; python -m pylint --rcfile=apps/feed-service-python/.pylintrc'"
     ]
   }
 }

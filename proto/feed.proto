@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package podkaap.feed.v1;
+
+service FeedEngine {
+  rpc RankFeed(FeedRequest) returns (FeedResponse);
+}
+
+message FeedRequest {
+  repeated Candidate candidates = 1;
+  map<string, int32> emotion_preferences = 2;
+  int32 limit = 3;
+}
+
+message Candidate {
+  string content_id = 1;
+  string item_type = 2;
+  string collection_id = 3;
+  string primary_emotion = 4;
+  double continue_conversion_score = 5;
+  double completion_score = 6;
+  double recency_score = 7;
+  int64 created_at_unix_ms = 8;
+  bool is_from_watching_collection = 9;
+  string target_content_id = 10;
+}
+
+message RankedItem {
+  string content_id = 1;
+  double score = 2;
+  repeated string reasons = 3;
+}
+
+message FeedResponse {
+  repeated RankedItem items = 1;
+}

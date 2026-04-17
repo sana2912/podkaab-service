@@ -14,6 +14,11 @@ export const appConfig = {
   auth: {
     jwtSecret: env.jwtSecret,
   },
+  feedService: {
+    enabled: env.feedServiceEnabled,
+    url: env.feedServiceUrl,
+    timeoutMs: env.feedServiceTimeoutMs,
+  },
   storage: {
     provider: env.storageProvider,
     cloudinary: {

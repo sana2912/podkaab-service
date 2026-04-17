@@ -37,3 +37,10 @@ tmp/
 *.tmp.mp4
 *.tmp.jpg
 *.tmp.png
+
+# ─── Python feed service artifacts ─────────────────────────────────────────
+**/venv/
+**/__pycache__/
+**/.pylint.d/
+apps/feed-service-python/generated/
+*.pyc

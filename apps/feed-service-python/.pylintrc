@@ -1,0 +1,24 @@
+[MASTER]
+ignore=generated
+
+[MESSAGES CONTROL]
+disable=
+  missing-module-docstring,
+  missing-function-docstring,
+  missing-class-docstring,
+  too-few-public-methods,
+  import-outside-toplevel,
+  broad-exception-caught,
+  wrong-import-position,
+  invalid-name,
+  too-many-instance-attributes,
+  too-many-locals
+
+[FORMAT]
+max-line-length=100
+
+[DESIGN]
+max-args=10
+
+[BASIC]
+good-names=i,j,k,_,id
